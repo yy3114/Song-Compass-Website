@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>點歌羅盤 - Song Compass</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans TC', sans-serif;
+            background: linear-gradient(135deg, #1a1f3a 0%, #1f1a3a 50%, #2d1b4e 100%);
+            color: #f0f0f0;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .background-effects {
+            position: fixed;
+            inset: 0;
+            opacity: 0.3;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .bg-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            animation: pulse 4s ease-in-out infinite;
+        }
+
+        .bg-orb-1 {
+            top: 5rem;
+            left: 2.5rem;
+            width: 16rem;
+            height: 16rem;
+            background: rgba(20, 184, 166, 0.2);
+        }
+
+        .bg-orb-2 {
+            bottom: 5rem;
+            right: 2.5rem;
+            width: 24rem;
+            height: 24rem;
+            background: rgba(34, 211, 238, 0.1);
+            animation-delay: 1s;
+        }
+
+        .bg-orb-3 {
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 37.5rem;
+            height: 37.5rem;
+            background: rgba(20, 184, 166, 0.05);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .container {
+            max-width: 80rem;
+            margin: 0 auto;
+            padding: 0 1rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        header {
+            padding: 2rem 0;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: bold;
+            background: linear-gradient(to right, #14b8a6, #22d3ee, #14b8a6);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: #9ca3af;
+            font-size: 1.125rem;
+        }
+
+        main {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-bottom: 3rem;
+            min-height: calc(100vh - 200px);
+            justify-content: center;
+        }
+
+        .category-card {
+            width: 100%;
+            max-width: 42rem;
+            padding: 1rem;
+            margin-bottom: 2rem;
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(20, 184, 166, 0.2);
+            border-radius: 1rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 0 40px rgba(20, 184, 166, 0.1);
+        }
+
+        .category-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 0.75rem;
+        }
+
+        .category-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 500;
+            border: 2px solid transparent;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: transparent;
+            color: #f0f0f0;
+        }
+
+        .category-btn.active {
+            background: #14b8a6;
+            color: white;
+            box-shadow: 0 10px 15px -3px rgba(20, 184, 166, 0.5);
+        }
+
+        .category-btn:not(.active) {
+            border-color: rgba(148, 163, 184, 0.3);
+        }
+
+        .category-btn:not(.active):hover {
+            border-color: rgba(20, 184, 166, 0.5);
+            background: rgba(20, 184, 166, 0.1);
+        }
+
+        .category-btn.has-selection:not(.active) {
+            border-color: rgba(20, 184, 166, 0.5);
+            background: rgba(20, 184, 166, 0.1);
+        }
+
+        .selection-dot {
+            width: 0.5rem;
+            height: 0.5rem;
+            border-radius: 50%;
+            background: #14b8a6;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .current-selection {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .current-selection h2 {
+            font-size: 1.875rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .selected-option {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-size: 1.125rem;
+            color: #14b8a6;
+        }
+
+        .selected-icon {
+            font-size: 1.5rem;
+        }
+
+        .compass-container {
+            width: 100%;
+            max-width: 32rem;
+            padding: 0 1rem;
+            margin-bottom: 3rem;
+        }
+
+        .compass {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1;
+            max-width: 28rem;
+            margin: 0 auto;
+        }
+
+        .compass-bg {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            background: radial-gradient(circle at center, rgba(13, 60, 70, 0.6) 0%, rgba(15, 45, 60, 0.8) 50%, rgba(10, 35, 50, 0.9) 100%);
+            border: 1px solid rgba(20, 184, 166, 0.2);
+            box-shadow: 0 0 80px rgba(20, 184, 166, 0.3), inset 0 0 60px rgba(20, 184, 166, 0.05), 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .compass-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 6rem;
+            height: 6rem;
+            border-radius: 50%;
+            border: 2px solid rgba(20, 184, 166, 0.4);
+            background: radial-gradient(circle at 30% 30%, rgba(20, 184, 166, 0.3) 0%, rgba(20, 184, 166, 0.1) 50%, rgba(20, 184, 166, 0.05) 100%);
+            box-shadow: 0 0 30px rgba(20, 184, 166, 0.4), inset 0 0 20px rgba(20, 184, 166, 0.2);
+        }
+
+        .compass-tick {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform-origin: left center;
+            width: 50%;
+            height: 2px;
+        }
+
+        .tick-line {
+            margin-left: auto;
+            background: rgba(20, 184, 166, 0.3);
+            height: 1px;
+            width: 1rem;
+        }
+
+        .tick-line.main {
+            background: rgba(20, 184, 166, 0.6);
+            height: 2px;
+            width: 2rem;
+        }
+
+        .option-btn {
+            position: absolute;
+            width: 4rem;
+            height: 4rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(20, 184, 166, 0.3);
+            transform: translate(-50%, -50%);
+        }
+
+        .option-btn:hover {
+            background: rgba(30, 41, 59, 0.9);
+            transform: translate(-50%, -50%) scale(1.05);
+            box-shadow: 0 10px 15px -3px rgba(20, 184, 166, 0.3);
+        }
+
+        .option-btn.selected {
+            background: #14b8a6;
+            transform: translate(-50%, -50%) scale(1.1);
+            box-shadow: 0 20px 25px -5px rgba(20, 184, 166, 0.5);
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .option-btn.playing {
+            animation: pulse 1s ease-in-out infinite;
+            box-shadow: 0 0 30px rgba(20, 184, 166, 0.8);
+        }
+
+        .needle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 6px;
+            height: 38%;
+            transform-origin: bottom center;
+            cursor: grab;
+            z-index: 20;
+            filter: drop-shadow(0 0 8px rgba(20, 184, 166, 0.8));
+            transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .needle.dragging {
+            cursor: grabbing;
+            transition: none;
+        }
+
+        .needle-body {
+            position: absolute;
+            inset: 0;
+            border-radius: 3px;
+            background: linear-gradient(to top, rgb(20, 184, 166) 0%, rgb(34, 211, 238) 50%, rgba(20, 184, 166, 0.6) 100%);
+            box-shadow: 0 0 12px rgba(20, 184, 166, 0.8), inset 0 0 4px rgba(255, 255, 255, 0.3);
+        }
+
+        .needle-tip {
+            position: absolute;
+            top: -0.75rem;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-bottom: 16px solid rgb(20, 184, 166);
+            filter: drop-shadow(0 0 6px rgba(20, 184, 166, 0.9));
+        }
+
+        .center-btn {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 3.5rem;
+            height: 3.5rem;
+            border-radius: 50%;
+            border: 4px solid #14b8a6;
+            background: radial-gradient(circle at 30% 30%, rgba(20, 184, 166, 0.4) 0%, rgba(15, 45, 60, 0.9) 100%);
+            box-shadow: 0 0 20px rgba(20, 184, 166, 0.6), inset 0 0 10px rgba(20, 184, 166, 0.3);
+            cursor: grab;
+            z-index: 30;
+            transition: transform 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .center-btn:hover {
+            transform: translate(-50%, -50%) scale(1.1);
+        }
+
+        .center-btn:active {
+            cursor: grabbing;
+            transform: translate(-50%, -50%) scale(0.95);
+        }
+
+        .center-dot {
+            width: 0.5rem;
+            height: 0.5rem;
+            border-radius: 50%;
+            background: #14b8a6;
+            box-shadow: 0 0 10px rgba(20, 184, 166, 0.8);
+        }
+
+        .music-player {
+            width: 100%;
+            max-width: 42rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(20, 184, 166, 0.3);
+            border-radius: 1rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 0 40px rgba(20, 184, 166, 0.2);
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .music-info {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .music-info h3 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            color: #14b8a6;
+        }
+
+        .music-info .category-label {
+            font-size: 0.875rem;
+            color: #9ca3af;
+            margin-bottom: 0.25rem;
+        }
+
+        .music-info .song-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #f0f0f0;
+        }
+
+        .player-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .play-pause-btn {
+            width: 3.5rem;
+            height: 3.5rem;
+            border-radius: 50%;
+            background: #14b8a6;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            flex-shrink: 0;
+        }
+
+        .play-pause-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 20px rgba(20, 184, 166, 0.6);
+        }
+
+        .play-pause-btn:active {
+            transform: scale(0.95);
+        }
+
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-shrink: 0;
+        }
+
+        .volume-icon {
+            color: #9ca3af;
+            font-size: 1.25rem;
+        }
+
+        .volume-slider {
+            width: 80px;
+            height: 4px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: rgba(148, 163, 184, 0.3);
+            border-radius: 2px;
+            outline: none;
+        }
+
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            background: #14b8a6;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .volume-slider::-moz-range-thumb {
+            width: 14px;
+            height: 14px;
+            background: #14b8a6;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+
+        .progress-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(148, 163, 184, 0.3);
+            border-radius: 3px;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #14b8a6;
+            transition: width 0.1s;
+            box-shadow: 0 0 10px rgba(20, 184, 166, 0.5);
+        }
+
+        .time-display {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.875rem;
+            color: #9ca3af;
+        }
+
+        .recommend-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .recommend-btn {
+            padding: 1rem 2rem;
+            font-size: 1.125rem;
+            font-weight: 600;
+            background: #14b8a6;
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            box-shadow: 0 20px 25px -5px rgba(20, 184, 166, 0.3);
+            transition: all 0.3s;
+        }
+
+        .recommend-btn:hover {
+            box-shadow: 0 25px 50px -12px rgba(20, 184, 166, 0.4);
+            transform: scale(1.05);
+        }
+
+        .recommend-btn:active {
+            transform: scale(0.95);
+        }
+
+        .selections-summary {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 0.75rem;
+            max-width: 28rem;
+        }
+
+        .selection-card {
+            padding: 0.5rem 1rem;
+            background: rgba(30, 41, 59, 0.4);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(20, 184, 166, 0.2);
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .selection-card-icon {
+            font-size: 1.25rem;
+        }
+
+        .selection-card-label {
+            color: #9ca3af;
+        }
+
+        .selection-card-value {
+            font-weight: 500;
+        }
+
+        .playlist-container {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(148, 163, 184, 0.2);
+        }
+
+        .playlist-title {
+            font-size: 0.875rem;
+            color: #9ca3af;
+            margin-bottom: 0.5rem;
+            text-align: center;
+        }
+
+        .playlist-items {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .playlist-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: rgba(15, 23, 42, 0.4);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .playlist-item:hover {
+            background: rgba(15, 23, 42, 0.6);
+            border-color: rgba(20, 184, 166, 0.4);
+        }
+
+        .playlist-item.active {
+            background: rgba(20, 184, 166, 0.2);
+            border-color: rgba(20, 184, 166, 0.6);
+        }
+
+        .playlist-item-number {
+            width: 1.5rem;
+            height: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(148, 163, 184, 0.2);
+            border-radius: 50%;
+            font-size: 0.75rem;
+            color: #9ca3af;
+            flex-shrink: 0;
+        }
+
+        .playlist-item.active .playlist-item-number {
+            background: #14b8a6;
+            color: white;
+        }
+
+        .playlist-item-title {
+            flex: 1;
+            font-size: 0.875rem;
+            color: #f0f0f0;
+        }
+
+        .playlist-item-icon {
+            font-size: 1rem;
+            color: #9ca3af;
+        }
+
+        .playlist-item.active .playlist-item-icon {
+            color: #14b8a6;
+        }
+
+        footer {
+            text-align: center;
+            padding: 1.5rem 0;
+            color: #9ca3af;
+            font-size: 0.875rem;
+        }
+
+        @media (max-width: 640px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            .current-selection h2 {
+                font-size: 1.5rem;
+            }
+
+            .option-btn {
+                width: 3.5rem;
+                height: 3.5rem;
+                font-size: 1.25rem;
+            }
+
+            .player-controls {
+                flex-wrap: wrap;
+            }
+
+            .volume-control {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="background-effects">
+        <div class="bg-orb bg-orb-1"></div>
+        <div class="bg-orb bg-orb-2"></div>
+        <div class="bg-orb bg-orb-3"></div>
+    </div>
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // 圖標元件
+        const Stethoscope = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3"/>
+                <path d="M8 15v1a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6v-4"/>
+                <circle cx="20" cy="10" r="2"/>
+            </svg>
+        );
+
+        const Cross = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M11 2a2 2 0 0 0-2 2v5H4a2 2 0 0 0-2 2v2c0 1.1.9 2 2 2h5v5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-5h5a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2h-5V4a2 2 0 0 0-2-2h-2z"/>
+            </svg>
+        );
+
+        const HelpCircle = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                <circle cx="12" cy="17" r="0.5" fill="currentColor"/>
+            </svg>
+        );
+
+        // 音樂播放器元件
+        function MusicPlayer({ currentMusic, musicInfo, playlist }) {
+            const audioRef = useRef(null);
+            const [isPlaying, setIsPlaying] = useState(false);
+            const [currentTime, setCurrentTime] = useState(0);
+            const [duration, setDuration] = useState(0);
+            const [volume, setVolume] = useState(0.7);
+            const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
+
+            useEffect(() => {
+                if (currentMusic && audioRef.current) {
+                    audioRef.current.src = currentMusic;
+                    audioRef.current.volume = volume;
+                    audioRef.current.load();
+                    setCurrentTrackIndex(0);
+                    const playPromise = audioRef.current.play();
+                    if (playPromise !== undefined) {
+                        playPromise.then(() => {
+                            setIsPlaying(true);
+                        }).catch(error => {
+                            console.error('播放失敗:', error);
+                            setIsPlaying(false);
+                        });
+                    }
+                }
+            }, [currentMusic]);
+
+            useEffect(() => {
+                if (audioRef.current) {
+                    audioRef.current.volume = volume;
+                }
+            }, [volume]);
+
+            const togglePlayPause = () => {
+                if (!audioRef.current) return;
+                if (isPlaying) {
+                    audioRef.current.pause();
+                    setIsPlaying(false);
+                } else {
+                    const playPromise = audioRef.current.play();
+                    if (playPromise !== undefined) {
+                        playPromise.then(() => {
+                            setIsPlaying(true);
+                        }).catch(error => {
+                            console.error('播放失敗:', error);
+                            setIsPlaying(false);
+                        });
+                    }
+                }
+            };
+
+            const handleTimeUpdate = () => {
+                if (audioRef.current) {
+                    setCurrentTime(audioRef.current.currentTime);
+                }
+            };
+
+            const handleLoadedMetadata = () => {
+                if (audioRef.current) {
+                    setDuration(audioRef.current.duration);
+                }
+            };
+
+            const handleProgressClick = (e) => {
+                if (!audioRef.current) return;
+                const rect = e.currentTarget.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const percentage = x / rect.width;
+                audioRef.current.currentTime = percentage * duration;
+            };
+
+            const formatTime = (time) => {
+                if (isNaN(time)) return '0:00';
+                const minutes = Math.floor(time / 60);
+                const seconds = Math.floor(time % 60);
+                return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            };
+
+            const playTrack = (index) => {
+                if (playlist && playlist[index] && audioRef.current) {
+                    setCurrentTrackIndex(index);
+                    audioRef.current.src = playlist[index].url;
+                    audioRef.current.load();
+                    const playPromise = audioRef.current.play();
+                    if (playPromise !== undefined) {
+                        playPromise.then(() => {
+                            setIsPlaying(true);
+                        }).catch(error => {
+                            console.error('播放失敗:', error);
+                            setIsPlaying(false);
+                        });
+                    }
+                }
+            };
+
+            const handleTrackEnd = () => {
+                setIsPlaying(false);
+                if (playlist && currentTrackIndex < playlist.length - 1) {
+                    playTrack(currentTrackIndex + 1);
+                }
+            };
+
+            const nextTrack = () => {
+                if (playlist && currentTrackIndex < playlist.length - 1) {
+                    playTrack(currentTrackIndex + 1);
+                }
+            };
+
+            const prevTrack = () => {
+                if (playlist && currentTrackIndex > 0) {
+                    playTrack(currentTrackIndex - 1);
+                }
+            };
+
+            if (!currentMusic) return null;
+
+            const currentSongTitle = playlist ? playlist[currentTrackIndex].title : musicInfo.title;
+
+            return (
+                <div className="music-player">
+                    <div className="music-info">
+                        <h3>🎵 正在播放</h3>
+                        <div className="category-label">{musicInfo.category}</div>
+                        <div className="song-title">{currentSongTitle}</div>
+                        {playlist && playlist.length > 1 && (
+                            <div style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#9ca3af' }}>
+                                {currentTrackIndex + 1} / {playlist.length}
+                            </div>
+                        )}
+                    </div>
+                    <div className="player-controls">
+                        {playlist && playlist.length > 1 && (
+                            <button 
+                                className="play-pause-btn" 
+                                onClick={prevTrack}
+                                disabled={currentTrackIndex === 0}
+                                style={{ opacity: currentTrackIndex === 0 ? 0.5 : 1, cursor: currentTrackIndex === 0 ? 'not-allowed' : 'pointer' }}
+                            >
+                                ⏮
+                            </button>
+                        )}
+                        <button className="play-pause-btn" onClick={togglePlayPause}>
+                            {isPlaying ? '⏸' : '▶'}
+                        </button>
+                        {playlist && playlist.length > 1 && (
+                            <button 
+                                className="play-pause-btn" 
+                                onClick={nextTrack}
+                                disabled={currentTrackIndex === playlist.length - 1}
+                                style={{ opacity: currentTrackIndex === playlist.length - 1 ? 0.5 : 1, cursor: currentTrackIndex === playlist.length - 1 ? 'not-allowed' : 'pointer' }}
+                            >
+                                ⏭
+                            </button>
+                        )}
+                        <div className="progress-container">
+                            <div className="progress-bar" onClick={handleProgressClick}>
+                                <div 
+                                    className="progress-fill" 
+                                    style={{ width: `${(currentTime / duration) * 100}%` }}
+                                />
+                            </div>
+                            <div className="time-display">
+                                <span>{formatTime(currentTime)}</span>
+                                <span>{formatTime(duration)}</span>
+                            </div>
+                        </div>
+                        <div className="volume-control">
+                            <span className="volume-icon">🔊</span>
+                            <input
+                                type="range"
+                                className="volume-slider"
+                                min="0"
+                                max="1"
+                                step="0.01"
+                                value={volume}
+                                onChange={(e) => setVolume(parseFloat(e.target.value))}
+                            />
+                        </div>
+                    </div>
+                    <audio
+                        ref={audioRef}
+                        onTimeUpdate={handleTimeUpdate}
+                        onLoadedMetadata={handleLoadedMetadata}
+                        onEnded={handleTrackEnd}
+                    />
+                    {playlist && playlist.length > 1 && (
+                        <div className="playlist-container">
+                            <div className="playlist-title">播放清單</div>
+                            <div className="playlist-items">
+                                {playlist.map((track, index) => (
+                                    <div
+                                        key={index}
+                                        className={`playlist-item ${index === currentTrackIndex ? 'active' : ''}`}
+                                        onClick={() => playTrack(index)}
+                                    >
+                                        <div className="playlist-item-number">{index + 1}</div>
+                                        <div className="playlist-item-title">{track.title}</div>
+                                        <div className="playlist-item-icon">
+                                            {index === currentTrackIndex && isPlaying ? '🔊' : '🎵'}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // 羅盤元件
+        function Compass({ options, onSelect, selectedOption, playingOptionId }) {
+            const compassRef = useRef(null);
+            const [isDragging, setIsDragging] = useState(false);
+            const [currentAngle, setCurrentAngle] = useState(0);
+
+            const calculateAngle = (clientX, clientY) => {
+                if (!compassRef.current) return 0;
+                const rect = compassRef.current.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                const deltaX = clientX - centerX;
+                const deltaY = clientY - centerY;
+                let angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI) + 90;
+                if (angle < 0) angle += 360;
+                return angle;
+            };
+
+            const findClosestOption = (angle) => {
+                let closestOption = options[0];
+                let minDiff = 360;
+                options.forEach(option => {
+                    const diff1 = Math.abs(angle - option.angle);
+                    const diff2 = Math.abs(angle - option.angle + 360);
+                    const diff3 = Math.abs(angle - option.angle - 360);
+                    const diff = Math.min(diff1, diff2, diff3);
+                    if (diff < minDiff) {
+                        minDiff = diff;
+                        closestOption = option;
+                    }
+                });
+                return closestOption;
+            };
+
+            const handleStart = (clientX, clientY) => {
+                setIsDragging(true);
+                const angle = calculateAngle(clientX, clientY);
+                setCurrentAngle(angle);
+            };
+
+            const handleMove = (clientX, clientY) => {
+                if (!isDragging) return;
+                const angle = calculateAngle(clientX, clientY);
+                setCurrentAngle(angle);
+            };
+
+            const handleEnd = () => {
+                if (!isDragging) return;
+                setIsDragging(false);
+                const closestOption = findClosestOption(currentAngle);
+                setCurrentAngle(closestOption.angle);
+                onSelect(closestOption);
+            };
+
+            useEffect(() => {
+                if (!isDragging) return;
+
+                const handleMouseMove = (e) => handleMove(e.clientX, e.clientY);
+                const handleTouchMove = (e) => handleMove(e.touches[0].clientX, e.touches[0].clientY);
+
+                window.addEventListener('mousemove', handleMouseMove);
+                window.addEventListener('mouseup', handleEnd);
+                window.addEventListener('touchmove', handleTouchMove);
+                window.addEventListener('touchend', handleEnd);
+
+                return () => {
+                    window.removeEventListener('mousemove', handleMouseMove);
+                    window.removeEventListener('mouseup', handleEnd);
+                    window.removeEventListener('touchmove', handleTouchMove);
+                    window.removeEventListener('touchend', handleEnd);
+                };
+            }, [isDragging, currentAngle]);
+
+            useEffect(() => {
+                if (selectedOption && !isDragging) {
+                    setCurrentAngle(selectedOption.angle);
+                }
+            }, [selectedOption, isDragging]);
+
+            return (
+                <div className="compass">
+                    <div ref={compassRef} className="compass-bg">
+                        {Array.from({ length: 24 }).map((_, i) => {
+                            const angle = (i * 360) / 24;
+                            const isMainTick = i % 6 === 0;
+                            return (
+                                <div
+                                    key={i}
+                                    className="compass-tick"
+                                    style={{ transform: `translate(-50%, -50%) rotate(${angle}deg)` }}
+                                >
+                                    <div className={`tick-line ${isMainTick ? 'main' : ''}`} />
+                                </div>
+                            );
+                        })}
+                        <div className="compass-center" />
+                    </div>
+
+                    {options.map((option) => {
+                        const radians = ((option.angle - 90) * Math.PI) / 180;
+                        const radius = 42;
+                        const x = 50 + radius * Math.cos(radians);
+                        const y = 50 + radius * Math.sin(radians);
+                        const isSelected = selectedOption?.id === option.id;
+                        const isPlaying = playingOptionId === option.id;
+
+                        return (
+                            <button
+                                key={option.id}
+                                className={`option-btn ${isSelected ? 'selected' : ''} ${isPlaying ? 'playing' : ''}`}
+                                style={{ left: `${x}%`, top: `${y}%` }}
+                                onClick={() => {
+                                    setCurrentAngle(option.angle);
+                                    onSelect(option);
+                                }}
+                            >
+                                {option.icon}
+                            </button>
+                        );
+                    })}
+
+                    <div
+                        className={`needle ${isDragging ? 'dragging' : ''}`}
+                        style={{ transform: `translate(-50%, -100%) rotate(${currentAngle}deg)` }}
+                        onMouseDown={(e) => handleStart(e.clientX, e.clientY)}
+                        onTouchStart={(e) => handleStart(e.touches[0].clientX, e.touches[0].clientY)}
+                    >
+                        <div className="needle-body" />
+                        <div className="needle-tip" />
+                    </div>
+
+                    <button
+                        className="center-btn"
+                        onMouseDown={(e) => handleStart(e.clientX, e.clientY)}
+                        onTouchStart={(e) => handleStart(e.touches[0].clientX, e.touches[0].clientY)}
+                    >
+                        <div className="center-dot" />
+                    </button>
+                </div>
+            );
+        }
+
+        // 主應用程式
+        function App() {
+            const categories = {
+                medical: {
+                    title: "醫療工作",
+                    icon: <Stethoscope />,
+                    options: [
+                        { 
+                            id: "surgery", 
+                            label: "手術室", 
+                            icon: "⚕️", 
+                            angle: 0, 
+                            musicUrl: "./柔鏡之路.mp3",
+                            songTitle: "柔鏡之路",
+                            playlist: [
+                                { url: "./柔鏡之路.mp3", title: "柔鏡之路" },
+                                { url: "./在破碎的石中迎來黎明.mp3", title: "在破碎的石中迎來黎明" },
+                                { url: "./銀河之刃，光之河.mp3", title: "銀河之刃，光之河" }
+                            ]
+                        },
+                        { 
+                            id: "urology", 
+                            label: "泌尿科日常", 
+                            icon: "🩺", 
+                            angle: 90,
+                            musicUrl: "./新樓泌尿科日常.mp3",
+                            songTitle: "新樓泌尿科日常",
+                            playlist: [
+                                { url: "./新樓泌尿科日常.mp3", title: "新樓泌尿科日常" },
+                                { url: "./新樓泌尿科.mp3", title: "新樓泌尿科" },
+                                { url: "./新樓泌尿俠.mp3", title: "新樓泌尿俠" }
+                            ]
+                        },
+                        { id: "ward", label: "病房", icon: "🛏️", angle: 180 },
+                        { 
+                            id: "clinic", 
+                            label: "門診", 
+                            icon: "🏥", 
+                            angle: 270, 
+                            musicUrl: "./門診即景.mp3",
+                            songTitle: "門診即景"
+                        },
+                    ],
+                },
+                faith: {
+                    title: "信仰歌曲",
+                    icon: <Cross />,
+                    options: [
+                        { id: "praise", label: "讚美", icon: "🙏", angle: 0 },
+                        { id: "worship", label: "敬拜", icon: "✝️", angle: 60 },
+                        { id: "prayer", label: "禱告", icon: "🕊️", angle: 120 },
+                        { id: "gospel", label: "福音", icon: "📖", angle: 180 },
+                        { id: "meditation", label: "默想", icon: "🕯️", angle: 240 },
+                        { 
+                            id: "thanksgiving", 
+                            label: "感恩", 
+                            icon: "🌟", 
+                            angle: 300,
+                            musicUrl: "./祂為你而來.mp3",
+                            songTitle: "祂為你而來"
+                        },
+                    ],
+                },
+                untitled: {
+                    title: "Untitled",
+                    icon: <HelpCircle />,
+                    options: [
+                        { id: "option1", label: "選項一", icon: "❓", angle: 0 },
+                        { id: "option2", label: "選項二", icon: "❔", angle: 72 },
+                        { id: "option3", label: "選項三", icon: "⭐", angle: 144 },
+                        { id: "option4", label: "選項四", icon: "🔮", angle: 216 },
+                        { id: "option5", label: "選項五", icon: "💫", angle: 288 },
+                    ],
+                },
+            };
+
+            const [currentCategory, setCurrentCategory] = useState("medical");
+            const [selections, setSelections] = useState({
+                medical: undefined,
+                faith: undefined,
+                untitled: undefined,
+            });
+            const [currentMusic, setCurrentMusic] = useState(null);
+            const [musicInfo, setMusicInfo] = useState({ category: "", title: "" });
+            const [playingOptionId, setPlayingOptionId] = useState(null);
+            const [currentPlaylist, setCurrentPlaylist] = useState(null);
+
+            const handleSelect = (option) => {
+                setSelections((prev) => ({
+                    ...prev,
+                    [currentCategory]: option,
+                }));
+
+                // 如果選項有音樂,則播放
+                if (option.musicUrl && option.songTitle) {
+                    setCurrentMusic(option.musicUrl);
+                    setMusicInfo({
+                        category: `${categories[currentCategory].title} - ${option.label}`,
+                        title: option.songTitle
+                    });
+                    setPlayingOptionId(option.id);
+                    setCurrentPlaylist(option.playlist || null);
+                } else {
+                    setCurrentMusic(null);
+                    setMusicInfo({ category: "", title: "" });
+                    setPlayingOptionId(null);
+                    setCurrentPlaylist(null);
+                }
+            };
+
+            const handleRecommend = () => {
+                const selected = Object.entries(selections)
+                    .filter(([_, value]) => value !== undefined)
+                    .map(([key, value]) => `${categories[key].title}: ${value.label}`)
+                    .join(", ");
+
+                if (selected) {
+                    alert(`根據您的選擇推薦音樂:\n${selected}\n\n(這是演示版本,實際應用可連接音樂API)`);
+                } else {
+                    alert("請至少選擇一個類別!");
+                }
+            };
+
+            const currentCategoryData = categories[currentCategory];
+
+            return (
+                <>
+                    <header>
+                        <div className="container">
+                            <h1>點歌羅盤</h1>
+                            <p className="subtitle">Song Compass</p>
+                        </div>
+                    </header>
+
+                    <main>
+                        <div className="container">
+                            <div className="category-card">
+                                <div className="category-buttons">
+                                    {Object.keys(categories).map((cat) => {
+                                        const category = categories[cat];
+                                        const isActive = currentCategory === cat;
+                                        const hasSelection = selections[cat] !== undefined;
+
+                                        return (
+                                            <button
+                                                key={cat}
+                                                className={`category-btn ${isActive ? 'active' : ''} ${hasSelection ? 'has-selection' : ''}`}
+                                                onClick={() => setCurrentCategory(cat)}
+                                            >
+                                                {category.icon}
+                                                <span>{category.title}</span>
+                                                {hasSelection && !isActive && (
+                                                    <span className="selection-dot" />
+                                                )}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            <MusicPlayer currentMusic={currentMusic} musicInfo={musicInfo} playlist={currentPlaylist} />
+
+                            <div className="current-selection">
+                                <h2>選擇{currentCategoryData.title}</h2>
+                                {selections[currentCategory] && (
+                                    <div className="selected-option">
+                                        <span className="selected-icon">{selections[currentCategory].icon}</span>
+                                        <span>{selections[currentCategory].label}</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="compass-container">
+                                <Compass
+                                    options={currentCategoryData.options}
+                                    onSelect={handleSelect}
+                                    selectedOption={selections[currentCategory]}
+                                    playingOptionId={playingOptionId}
+                                />
+                            </div>
+
+                            <div className="recommend-section">
+                                <button className="recommend-btn" onClick={handleRecommend}>
+                                    🎵 獲取音樂推薦
+                                </button>
+
+                                <div className="selections-summary">
+                                    {Object.keys(categories).map((cat) => {
+                                        const selection = selections[cat];
+                                        if (!selection) return null;
+
+                                        return (
+                                            <div key={cat} className="selection-card">
+                                                <span className="selection-card-icon">{selection.icon}</span>
+                                                <span className="selection-card-label">{categories[cat].title}:</span>
+                                                <span className="selection-card-value">{selection.label}</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+
+                    <footer>
+                        <div className="container">
+                            <p>拖曳羅盤指針或點擊圖標來選擇您的偏好 • 點擊有音樂的選項即可播放</p>
+                        </div>
+                    </footer>
+                </>
+            );
+        }
+
+        // 渲染應用程式
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
+
